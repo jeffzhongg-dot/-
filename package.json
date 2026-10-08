@@ -1,0 +1,45 @@
+{
+  "name": "job-search-agent",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 0.0.0.0",
+    "build": "next build",
+    "start": "next start --hostname 0.0.0.0",
+    "test": "tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test",
+    "test:local": "tsx scripts/test-local.ts",
+    "test:stack": "tsx scripts/local-stack.ts"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^1.0.10",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.117.3",
+    "@tailwindcss/postcss": "^4.1.0",
+    "adm-zip": "^0.6.1",
+    "fast-xml-parser": "^5.5.0",
+    "next": "^16.4.0",
+    "pdfjs-dist": "^6.4.299",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "server-only": "^0.0.1",
+    "tailwindcss": "^4.1.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0",
+    "@types/adm-zip": "^0.5.7",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "jose": "^6.2.12",
+    "pdf-lib": "^1.17.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "type": "module"
+}

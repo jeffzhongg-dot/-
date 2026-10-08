@@ -1,0 +1,14 @@
+node_modules/
+.next/
+.data/
+.env*
+!.env.example
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+# Supabase tooling and synthetic-test secrets/artifacts
+supabase/.temp/
+supabase/.branches/
+*.local.env
+*.local.json
