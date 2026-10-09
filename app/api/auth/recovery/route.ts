@@ -4,6 +4,7 @@ import { boundedJson } from '../../../../lib/body';
 import { checkOrigin, failure } from '../../../../lib/http';
 import { serverClient } from '../../../../lib/supabase';
 import { AppError } from '../../../../lib/security';
+import { AuthDiagnosticError, diagnoseAuthExchange, issuerMismatch, logAuthDiagnostic } from '../../../../lib/auth-diagnostics';
 import { checkRecoveryOwner } from '../../../../lib/recovery';
 
 export async function POST(req: NextRequest) {
@@ -19,8 +20,11 @@ export async function POST(req: NextRequest) {
     const { error } = 'token_hash' in input.data
       ? await client.auth.verifyOtp({ token_hash: input.data.token_hash, type: 'recovery' })
       : await client.auth.setSession(input.data);
-    if (error) throw new AppError('恢复链接已过期、已使用或无效，请申请新的密码恢复邮件。', 401);
+    if (error) throw await diagnoseAuthExchange('recovery_exchange', error, 'access_token' in input.data && issuerMismatch(input.data.access_token, process.env.SUPABASE_URL));
     await checkRecoveryOwner(client);
     return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } });
-  } catch (error) { return failure(error); }
+  } catch (error) {
+    if (error instanceof AuthDiagnosticError) logAuthDiagnostic(error);
+    return failure(error);
+  }
 }

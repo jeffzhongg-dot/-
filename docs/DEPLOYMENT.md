@@ -105,3 +105,16 @@
 密码保存接口核对本人 UID 与数据库白名单，再调用 `updateUser`，不修改邮箱或其他用户。未登录、跨站请求、伪造会话、非本人或数据库权限错误都会拒绝保存。已通过本人校验的现有登录会话也可调用密码更新接口。成功后退出当前浏览器会话；不承诺其他设备会话全部即时失效。
 
 网页功能不能修复 Mac DNS、错误的 Vercel 配置或邮件发送限额。真实托管项目仍需本人通过新邮件完成最终验证；本地测试只使用合成账号和官方默认验证链接，不发送真实邮件。
+
+### 身份验证错误诊断
+
+恢复、登录及密码更新页面会显示安全诊断编号；Vercel 日志仅记录 `auth_diagnostic`、编号及 HTTP 状态，不记录身份凭据、邮箱、UID、项目地址、错误原文或请求正文。无需在网页调试工具复制敏感请求。
+
+- `RECOVERY_EXCHANGE_PROJECT_MISMATCH`：收到的恢复会话签发地址与网站配置的 Supabase 地址不一致。仅在认证失败时利用未验证 claims 解释错误，绝不用于授权；自定义 Auth 域名也需核对。
+- `…PROJECT_KEY_REJECTED`：身份接口拒绝后，只读查询 Auth settings 也拒绝了网站密钥。核对同一项目的 URL 与 Publishable key，并重新部署。该只读检查不发送邮件或修改用户。
+- `…LINK_INVALID` / `…SESSION_INVALID`：服务明确报告链接或会话失效。
+- `…RATE_LIMIT` / `…SERVICE_UNAVAILABLE`：服务限流或连接/服务错误。
+- `…AUTH_REJECTED` / `…TOKEN_REJECTED`：服务拒绝验证，但尚不能确定原因，不应直接断定密码错误或链接过期。
+- `RECOVERY_OWNER_MISMATCH` / `RECOVERY_WHITELIST_DENIED` / `RECOVERY_WHITELIST_UNAVAILABLE`：本人环境 UID 不符、数据库未授权或白名单检查未完成。
+
+未知错误内容不会透传；把页面上的诊断编号告诉助手即可，不需要复制密钥、密码或邮件链接。

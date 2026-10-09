@@ -9,7 +9,7 @@ function mock(id: string|null, allowed: boolean|null, policyError: object|null =
   return {client, signedOut:()=>signedOut};
 }
 test('password recovery requires a verified user and exact owner UID',async()=>{
-  await assert.rejects(checkRecoveryOwner(mock(null,true).client,owner),/恢复链接已失效/);
+  await assert.rejects(checkRecoveryOwner(mock(null,true).client,owner),/身份验证未通过/);
   const other=mock('22222222-2222-4222-8222-222222222222',true);
   await assert.rejects(checkRecoveryOwner(other.client,owner),/没有密码恢复权限/);
   assert.equal(other.signedOut(),true);

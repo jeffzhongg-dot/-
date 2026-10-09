@@ -1,3 +1,4 @@
+import { AuthDiagnosticError, authDiagnostic, logAuthDiagnostic } from '../../../../lib/auth-diagnostics';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { boundedJson } from '../../../../lib/body';
@@ -14,8 +15,9 @@ export async function POST(req: NextRequest) {
     const client = await serverClient();
     const user = await checkRecoveryOwner(client);
     const { data, error } = await client.auth.updateUser({ password: input.data.password });
-    if (error || data.user?.id !== user.id) throw new AppError('密码更新未完成。请检查项目密码要求；若恢复会话已失效，请申请新邮件。', 400);
+    if (error) throw authDiagnostic('password_update', error);
+    if (data.user?.id !== user.id) throw new AuthDiagnosticError('PASSWORD_UPDATE_USER_MISMATCH', '密码更新返回的账号不匹配，未确认完成。', 403);
     await client.auth.signOut({ scope: 'local' });
     return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } });
-  } catch (error) { return failure(error); }
+  } catch (error) { if (error instanceof AuthDiagnosticError) logAuthDiagnostic(error); return failure(error); }
 }
