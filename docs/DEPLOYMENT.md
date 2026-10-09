@@ -85,20 +85,23 @@
 
 ## 邮件恢复密码（不解除资料验证锁）
 
-此功能不需要任何新环境变量、管理员密钥或数据库迁移。恢复与密码接口使用普通 Publishable key 和本人会话；每次都核对服务端本人 UID 与数据库白名单。资料接口继续由 `DEPLOYMENT_LOCKED=true` 拒绝访问。
+支持 Supabase 默认邮件模板，无需自定义 SMTP、管理员密钥、新环境变量或数据库迁移。原 UID、白名单与 RLS 保留，资料接口继续由 `DEPLOYMENT_LOCKED=true` 拒绝访问。
 
-1. 将包含 `/reset-password` 页面的代码部署到现有 Vercel 项目，保持 `DEPLOYMENT_LOCKED=true`。
-2. 在 Supabase **Authentication → URL Configuration** 将 **Site URL** 设置为自己的固定 HTTPS 网站根地址，例如 `https://your-project.vercel.app`。不要包含 `/login`，不要添加尾部 `/`。如需 Redirect URLs，只添加本人网站的确切 `https://your-project.vercel.app/reset-password`，不要用通配符。
-3. 打开 **Authentication → Email Templates → Reset Password**（部分界面位于 Authentication → Emails → Templates），把重置按钮的链接改成下面的模板并保存。保留其他邮件正文；不要继续使用 `{{ .ConfirmationURL }}` 作为重置按钮链接。
+1. 等待现有 Vercel 项目的最新提交部署为 **Ready**，保持 `DEPLOYMENT_LOCKED=true`。
+2. 在 Supabase **Authentication → URL Configuration** 确认 **Site URL** 是自己的固定 HTTPS 网站根地址，例如 `https://your-project.vercel.app`。已正确时不需要修改。不要包含 `/login`，不要使用通配域名。
+3. 不修改默认 **Reset Password** 邮件模板，不需要设置 SMTP。如果已使用下面的自定义模板，仍兼容。
+4. 在 **Authentication → Users** 打开本人现有账号，点击 **Send password recovery**。如果限流仍在，等待限制解除，不要连续重试。
+5. 打开最新邮件的重置链接。Supabase 验证成功后会回到网站，网站识别 `type=recovery` 的会话并显示“设置新密码”。点击“验证本人恢复链接”，输入两次新密码（16–128 位，符合项目密码策略），点击“保存新密码”。成功后使用原邮箱与新密码重新登录。
+6. 已过期、已使用或不完整的链接显示明确错误；需重新申请邮件。邮件客户端安全扫描可能提前消费一次性链接，此时也需要重新申请，不会放宽校验。不要分享含恢复凭据的链接或调试请求正文。
+
+默认邮件先在 Supabase 验证一次性 OTP，成功后将 access/refresh token 通过 URL fragment 返回网站。根路径重定向到登录页时浏览器保留 fragment；登录页识别恢复会话并切换至设置密码组件，不把它误当成普通登录。页面读取后立即清除地址栏凭据，只保留在内存中，在本人确认时通过同源 POST 交给服务端 SDK `setSession`，再通过 `getUser` 验证真实身份与 `is_app_owner` 核对授权。不能仅凭客户端的 `type` 或解码 JWT 判断权限。
+
+仍兼容自定义邮件模板（仅在你的 SMTP 配置允许编辑时可选）：
 
 ```html
 <a href="{{ .SiteURL }}/reset-password#token_hash={{ .TokenHash }}&amp;type=recovery">设置新密码</a>
 ```
 
-4. 在 **Authentication → Users** 打开本人现有账号，点击 **Send password recovery**。如果邮件限流仍在，等待限制解除，不要连续重试。此功能不会绕过服务商邮件发送限制。
-5. 仅打开模板更新后发送的最新邮件。页面应为“设置新密码”；点击“验证本人恢复链接”，再输入两次新密码（16–128 位，符合项目密码策略），点击“保存新密码”。成功后使用原邮箱与新密码重新登录。
-6. 旧格式链接、已使用或过期链接无法恢复；重新申请邮件。不要转发邮件或复制包含恢复凭据的完整链接、不要分享浏览器调试请求正文。
+密码保存接口核对本人 UID 与数据库白名单，再调用 `updateUser`，不修改邮箱或其他用户。未登录、跨站请求、伪造会话、非本人或数据库权限错误都会拒绝保存。已通过本人校验的现有登录会话也可调用密码更新接口。成功后退出当前浏览器会话；不承诺其他设备会话全部即时失效。
 
-恢复凭据位于 URL fragment，不发送给网页服务器；页面读取后立即清除地址栏凭据，并在本人点击确认时通过同源 POST 验证 `recovery` OTP。接口不接收其他 OTP 类型，不开放注册、不设置公共 Storage 权限、不改变本人 UID、邮箱或白名单。未登录、跨站请求、非本人账号、白名单检查失败都会拒绝保存密码。已通过本人校验的现有登录会话也可调用密码更新接口；其权限等同于本人恢复会话。成功后退出当前浏览器会话；不承诺其他设备的会话全部即时失效。
-
-网页功能不能修复 Mac 的 DNS、错误的 Vercel Supabase 配置或 Supabase 邮件发送限额；真实项目仍需本人通过新邮件完成最终验证。
+网页功能不能修复 Mac DNS、错误的 Vercel 配置或邮件发送限额。真实托管项目仍需本人通过新邮件完成最终验证；本地测试只使用合成账号和官方默认验证链接，不发送真实邮件。

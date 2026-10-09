@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { recoveryCredentials, type RecoveryCredentials } from '../../lib/recovery-link';
 
 export default function ResetPasswordForm() {
-  const token = useRef('');
+  const token = useRef<RecoveryCredentials | null>(null);
   const initialized = useRef(false);
   const [stage, setStage] = useState<'loading'|'verify'|'password'|'done'|'invalid'>('loading');
   const [error, setError] = useState('');
@@ -10,12 +11,12 @@ export default function ResetPasswordForm() {
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
-    const params = new URLSearchParams(window.location.hash.slice(1));
+    const credentials = recoveryCredentials(window.location.hash);
     // Strip recovery credentials immediately; they never go into a server URL.
     window.history.replaceState(null, '', '/reset-password');
-    if (params.get('type') === 'recovery' && /^[a-fA-F0-9]{56,64}$/.test(params.get('token_hash') || '')) {
-      token.current = params.get('token_hash')!; setStage('verify');
-    } else { setStage('invalid'); setError('恢复链接已过期或格式无效。请使用配置更新后发送的新邮件，不要重复点击旧链接。'); }
+    if (credentials) {
+      token.current = credentials; setStage('verify');
+    } else { setStage('invalid'); setError('恢复链接已过期或格式无效。请申请并打开最新恢复邮件，不要重复点击已失效的链接。'); }
   }, []);
   async function post(path: string, body: object) {
     const response = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -29,7 +30,7 @@ export default function ResetPasswordForm() {
       {stage === 'loading' && <p>正在读取恢复链接…</p>}
       {stage === 'verify' && <><p>点击确认后验证这封邮件的恢复链接。链接只能使用一次。</p><button className="btn primary" disabled={busy} onClick={async () => {
         setBusy(true); setError('');
-        try { await post('/api/auth/recovery', {token_hash: token.current}); token.current = ''; setStage('password'); }
+        try { await post('/api/auth/recovery', token.current!); token.current = null; setStage('password'); }
         catch (e) { setError((e as Error).message); }
         finally { setBusy(false); }
       }}>{busy ? '正在验证…' : '验证本人恢复链接'}</button></>}

@@ -94,6 +94,6 @@ API只接收小型JSON。原件直接进入Storage；下载原件/预览使用�
 
 不要公开包含真实资料的环境快照，不要添加 `.data/`、`.env*`、测试输出或原件到Git。默认保留原件直到本人删除，不自动过期；后续可增加保留期限、备份管理和清理任务。
 
-密码恢复：使用 `/reset-password` 页面和 Supabase recovery 邮件，不需要管理员密钥。首次使用必须按 [部署说明的邮件恢复章节](docs/DEPLOYMENT.md#邮件恢复密码不解除资料验证锁) 更新 Site URL 与邮件模板。保留 `DEPLOYMENT_LOCKED=true`；旧邮件格式不受支持。
+密码恢复：使用 `/reset-password` 页面和 Supabase recovery 邮件，不需要管理员密钥。支持 Supabase 默认恢复邮件，无需编辑模板或配置 SMTP。按 [部署说明的邮件恢复章节](docs/DEPLOYMENT.md#邮件恢复密码不解除资料验证锁) 确认 Site URL，保留 `DEPLOYMENT_LOCKED=true`，使用新的有效恢复链接。
 
 本地合成账号恢复集成测试：先运行 `npm run test:stack`，再运行 `npm run test:recovery`；仅允许 localhost 测试后端，不发送真实邮件，不使用个人资料。

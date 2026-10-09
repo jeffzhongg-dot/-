@@ -21,3 +21,16 @@ test('password recovery fails closed on missing whitelist or database error',asy
   }
   assert.equal((await checkRecoveryOwner(mock(owner,true).client,owner)).id,owner);
 });
+
+test('default recovery fragments are accepted only as recovery and errors fail closed', async()=>{
+  const { recoveryCredentials } = await import('../lib/recovery-link');
+  const access='eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0In0.signature';
+  const refresh='synthetic_refresh_token_123456789';
+  const fragment=`#access_token=${access}&refresh_token=${refresh}&type=recovery`;
+  assert.deepEqual(recoveryCredentials(fragment),{access_token:access,refresh_token:refresh});
+  assert.equal(recoveryCredentials(fragment.replace('recovery','signup')),null);
+  assert.equal(recoveryCredentials(fragment+'&error=access_denied'),null);
+  assert.equal(recoveryCredentials('#type=recovery&access_token='+access),null);
+  assert.equal(recoveryCredentials('#type=recovery&token_hash=bad'),null);
+  assert.deepEqual(recoveryCredentials('#type=recovery&token_hash='+'a'.repeat(56)),{token_hash:'a'.repeat(56)});
+});

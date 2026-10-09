@@ -1,14 +1,22 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import ResetPasswordForm from '../reset-password/ResetPasswordForm';
+import { recoveryCredentials } from '../../lib/recovery-link';
 export default function LoginForm({ configured, locked }: { configured: boolean; locked: boolean }) {
+  const initialized = useRef(false);
+  const [recovering, setRecovering] = useState(false);
   const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
   useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+    if (recoveryCredentials(window.location.hash)) { setRecovering(true); return; }
     const params = new URLSearchParams(window.location.hash.slice(1));
     if (params.has('error') || params.has('access_token') || params.has('token_hash') || params.get('type') === 'recovery') {
       window.history.replaceState(null, '', '/login');
-      setError('这封恢复邮件的链接已失效或使用了旧格式。请使用新邮件中的专用密码恢复页面。');
+      setError('这封恢复邮件的链接已失效或不完整。请申请并打开最新的恢复邮件。');
     }
   }, []);
+  if (recovering) return <ResetPasswordForm/>;
   return <main style={{ maxWidth: 440, margin: '12vh auto', padding: 24 }}><div className="eyebrow">PRIVATE CAREER WORKSPACE</div><h1>职途 · 私人求职工作台</h1><p className="subtitle">仅已授权的本人账号可以登录。此应用不开放注册。</p><section className="panel section"><div className="panel-body">
     {configured && locked && <div className="warning">部署验证锁已启用。只有在私人测试环境完成权限验证后，才能解锁资料功能。</div>}
     {!configured && <div className="warning">Supabase 尚未配置，应用已关闭资料访问。请先按部署说明创建项目、关闭公开注册并配置本人账号。</div>}
