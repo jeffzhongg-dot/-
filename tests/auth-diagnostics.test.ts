@@ -15,7 +15,7 @@ test('diagnostics distinguish failures without propagating provider secrets',()=
   ];
   for(const [provider,reason,status] of cases){
     const result=authDiagnostic('recovery_exchange',provider);
-    assert.ok(result.diagnostic.endsWith(reason));assert.equal(result.status,status);
+    assert.ok(result.diagnostic.includes(reason));assert.equal(result.status,status);
     assert.ok(!result.message.includes(secret));
   }
   assert.ok(authDiagnostic('recovery_exchange',{code:'otp_expired'},true).diagnostic.endsWith('PROJECT_MISMATCH'));
@@ -31,7 +31,7 @@ test('diagnostic log contains only fixed code and status',()=>{
   const original=console.warn;const lines:string[]=[];
   try{console.warn=(line:string)=>{lines.push(line);};logAuthDiagnostic(authDiagnostic('recovery_exchange',{message:'secret',code:'secret',status:401}));}
   finally{console.warn=original;}
-  assert.deepEqual(JSON.parse(lines[0]),{event:'auth_diagnostic',diagnostic:'RECOVERY_EXCHANGE_AUTH_REJECTED',status:401});
+  assert.deepEqual(JSON.parse(lines[0]),{event:'auth_diagnostic',diagnostic:'RECOVERY_EXCHANGE_AUTH_REJECTED_H401_UNKNOWN_UNCLASSIFIED',status:401});
 });
 
 test('read-only settings probe distinguishes rejected project key without changing auth',async()=>{
@@ -45,5 +45,12 @@ test('read-only settings probe distinguishes rejected project key without changi
   assert.ok(result.diagnostic.endsWith('PROJECT_KEY_REJECTED'));assert.ok(!result.message.includes('private provider body'));
   await diagnoseAuthExchange('recovery_exchange',{code:'otp_expired'},false,options);assert.equal(calls,1);
   const valid=await diagnoseAuthExchange('recovery_exchange',{status:401},false,{...options,fetcher:(async()=>new Response('{}',{status:200})) as typeof fetch});
-  assert.ok(valid.diagnostic.endsWith('AUTH_REJECTED'));
+  assert.ok(valid.diagnostic.includes('AUTH_REJECTED'));
+});
+
+ test('unmapped official errors retain safe SDK name, status and code only',()=>{
+  const result=authDiagnostic('recovery_exchange',{name:'AuthApiError',status:403,code:'no_authorization',message:'PRIVATE',details:'TOKEN'});
+  assert.equal(result.diagnostic,'RECOVERY_EXCHANGE_AUTH_REJECTED_H403_AUTHAPIERROR_NO_AUTHORIZATION');
+  assert.ok(!result.message.includes('PRIVATE'));
+  assert.ok(!result.message.includes('TOKEN'));
 });
