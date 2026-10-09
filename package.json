@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
     "test:local": "tsx scripts/test-local.ts",
-    "test:stack": "tsx scripts/local-stack.ts"
+    "test:stack": "tsx scripts/local-stack.ts",
+    "test:recovery": "tsx scripts/test-recovery.ts"
   },
   "dependencies": {
     "@napi-rs/canvas": "^1.0.10",

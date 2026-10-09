@@ -82,3 +82,23 @@
 - 怀疑账号泄露时先将 `DEPLOYMENT_LOCKED=true` 并重新部署；在Supabase后台修改密码/撤销会话。不要只删除浏览器cookie。
 - Supabase/Vercel费用、暂停项目、Storage配额、备份保留和过期签名行为由平台管理；本项目不自动购买套餐或扩大费用。
 - 原件及档案不会自动到期删除，可在应用下载/导出后删除。上传签名可能在删除后仍短期有效，极端情况下可产生不可读取的孤立对象；需在签名到期后检查Storage并清理，本项目尚无后台定时孤立对象清理服务。
+
+## 邮件恢复密码（不解除资料验证锁）
+
+此功能不需要任何新环境变量、管理员密钥或数据库迁移。恢复与密码接口使用普通 Publishable key 和本人会话；每次都核对服务端本人 UID 与数据库白名单。资料接口继续由 `DEPLOYMENT_LOCKED=true` 拒绝访问。
+
+1. 将包含 `/reset-password` 页面的代码部署到现有 Vercel 项目，保持 `DEPLOYMENT_LOCKED=true`。
+2. 在 Supabase **Authentication → URL Configuration** 将 **Site URL** 设置为自己的固定 HTTPS 网站根地址，例如 `https://your-project.vercel.app`。不要包含 `/login`，不要添加尾部 `/`。如需 Redirect URLs，只添加本人网站的确切 `https://your-project.vercel.app/reset-password`，不要用通配符。
+3. 打开 **Authentication → Email Templates → Reset Password**（部分界面位于 Authentication → Emails → Templates），把重置按钮的链接改成下面的模板并保存。保留其他邮件正文；不要继续使用 `{{ .ConfirmationURL }}` 作为重置按钮链接。
+
+```html
+<a href="{{ .SiteURL }}/reset-password#token_hash={{ .TokenHash }}&amp;type=recovery">设置新密码</a>
+```
+
+4. 在 **Authentication → Users** 打开本人现有账号，点击 **Send password recovery**。如果邮件限流仍在，等待限制解除，不要连续重试。此功能不会绕过服务商邮件发送限制。
+5. 仅打开模板更新后发送的最新邮件。页面应为“设置新密码”；点击“验证本人恢复链接”，再输入两次新密码（16–128 位，符合项目密码策略），点击“保存新密码”。成功后使用原邮箱与新密码重新登录。
+6. 旧格式链接、已使用或过期链接无法恢复；重新申请邮件。不要转发邮件或复制包含恢复凭据的完整链接、不要分享浏览器调试请求正文。
+
+恢复凭据位于 URL fragment，不发送给网页服务器；页面读取后立即清除地址栏凭据，并在本人点击确认时通过同源 POST 验证 `recovery` OTP。接口不接收其他 OTP 类型，不开放注册、不设置公共 Storage 权限、不改变本人 UID、邮箱或白名单。未登录、跨站请求、非本人账号、白名单检查失败都会拒绝保存密码。已通过本人校验的现有登录会话也可调用密码更新接口；其权限等同于本人恢复会话。成功后退出当前浏览器会话；不承诺其他设备的会话全部即时失效。
+
+网页功能不能修复 Mac 的 DNS、错误的 Vercel Supabase 配置或 Supabase 邮件发送限额；真实项目仍需本人通过新邮件完成最终验证。
